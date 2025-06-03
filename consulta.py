@@ -6,18 +6,26 @@ from database import conectar
 def janela_consultas():
     janela = tk.Toplevel()
     janela.title("Gerenciar Consultas")
-    janela.geometry("750x450")
-    janela.configure(bg="#f5f5f5")
+    janela.geometry("800x500")
+    janela.configure(bg="#f7f6f2")
 
     style = ttk.Style()
-    style.theme_use("clam")
-    style.configure("TButton", font=("Helvetica", 10, "bold"), foreground="#004d40", padding=6)
-    style.configure("TLabel", font=("Helvetica", 10), background="#f5f5f5")
-    style.configure("TEntry", padding=5)
-    style.configure("Treeview", font=("Helvetica", 9), rowheight=25)
-    style.configure("Treeview.Heading", font=("Helvetica", 10, "bold"))
+    style.configure("TButton", font=("Segoe UI", 10, "bold"), padding=6)
+    style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
+    style.configure("Treeview", font=("Segoe UI", 10))
+
+    frame = ttk.Frame(janela)
+    frame.pack(pady=20, padx=20, expand=True, fill=tk.BOTH)
+
+    tree = ttk.Treeview(frame, columns=("ID", "Paciente", "Data", "Hora"), show="headings", height=10)
+    for col in ("ID", "Paciente", "Data", "Hora"):
+        tree.heading(col, text=col)
+        tree.column(col, anchor="center", width=100)
+    tree.pack(expand=True, fill=tk.BOTH, pady=10)
 
     def carregar_consultas():
+        for item in tree.get_children():
+            tree.delete(item)
         con = conectar()
         cur = con.cursor()
         cur.execute("""
@@ -26,62 +34,51 @@ def janela_consultas():
             JOIN pacientes ON consultas.paciente_id = pacientes.id
             ORDER BY consultas.data
         """)
-        dados = cur.fetchall()
+        for row in cur.fetchall():
+            tree.insert('', 'end', values=row)
         con.close()
 
-        for row in tree.get_children():
-            tree.delete(row)
-        for consulta in dados:
-            tree.insert('', 'end', values=consulta)
+    carregar_consultas()
 
-    def carregar_pacientes():
-        con = conectar()
-        cur = con.cursor()
-        cur.execute("SELECT id, nome FROM pacientes ORDER BY nome")
-        pacientes_lista = cur.fetchall()
-        con.close()
-        combo_paciente['values'] = [f"{p[0]} - {p[1]}" for p in pacientes_lista]
+    # Inputs
+    input_frame = ttk.Frame(janela)
+    input_frame.pack(pady=10)
+
+    ttk.Label(input_frame, text="Paciente ID:").grid(row=0, column=0, padx=5, pady=5)
+    entry_paciente_id = ttk.Entry(input_frame, width=10)
+    entry_paciente_id.grid(row=0, column=1, padx=5)
+
+    ttk.Label(input_frame, text="Data (DDMMYYYY):").grid(row=0, column=2, padx=5)
+    entry_data = ttk.Entry(input_frame, width=15)
+    entry_data.grid(row=0, column=3, padx=5)
+
+    ttk.Label(input_frame, text="Horário (HHMM):").grid(row=0, column=4, padx=5)
+    entry_horario = ttk.Entry(input_frame, width=10)
+    entry_horario.grid(row=0, column=5, padx=5)
 
     def adicionar_consulta():
-        paciente_info = combo_paciente.get()
-        if not paciente_info or "-" not in paciente_info:
-            messagebox.showwarning("Aviso", "Selecione um paciente.")
-            return
-
-        paciente_id = paciente_info.split(" - ")[0]
+        paciente_id = entry_paciente_id.get()
         data = entry_data.get()
         horario = entry_horario.get()
 
-        if not data or not horario:
+        if not paciente_id.strip() or not data.strip() or not horario.strip():
             messagebox.showwarning("Aviso", "Preencha todos os campos.")
             return
 
         con = conectar()
         cur = con.cursor()
-        cur.execute("INSERT INTO consultas (paciente_id, data, horario) VALUES (?, ?, ?)",
-                    (paciente_id, data, horario))
-        con.commit()
-        con.close()
-
-        carregar_consultas()
-        entry_data.delete(0, tk.END)
-        entry_horario.delete(0, tk.END)
-
-    def excluir_consulta():
-        selected = tree.focus()
-        if not selected:
-            messagebox.showwarning("Aviso", "Selecione uma consulta para excluir.")
-            return
-
-        consulta_id = tree.item(selected)['values'][0]
-        confirm = messagebox.askyesno("Confirmação", "Deseja realmente excluir esta consulta?")
-        if confirm:
-            con = conectar()
-            cur = con.cursor()
-            cur.execute("DELETE FROM consultas WHERE id = ?", (consulta_id,))
+        try:
+            cur.execute("INSERT INTO consultas (paciente_id, data, horario) VALUES (?, ?, ?)", (paciente_id, data, horario))
             con.commit()
-            con.close()
+            messagebox.showinfo("Sucesso", "Consulta adicionada.")
             carregar_consultas()
+            entry_paciente_id.delete(0, tk.END)
+            entry_data.delete(0, tk.END)
+            entry_horario.delete(0, tk.END)
+        except sqlite3.Error as e:
+            messagebox.showerror("Erro", f"Erro ao adicionar consulta: {e}")
+        finally:
+            con.close()
 
     def editar_consulta():
         selected = tree.focus()
@@ -90,72 +87,55 @@ def janela_consultas():
             return
 
         consulta_id = tree.item(selected)['values'][0]
-        paciente_info = combo_paciente.get()
-        if not paciente_info or "-" not in paciente_info:
-            messagebox.showwarning("Aviso", "Selecione um paciente.")
-            return
+        novo_paciente_id = entry_paciente_id.get()
+        nova_data = entry_data.get()
+        novo_horario = entry_horario.get()
 
-        paciente_id = paciente_info.split(" - ")[0]
-        data = entry_data.get()
-        horario = entry_horario.get()
-
-        if not data or not horario:
+        if not novo_paciente_id.strip() or not nova_data.strip() or not novo_horario.strip():
             messagebox.showwarning("Aviso", "Preencha todos os campos.")
             return
 
         con = conectar()
         cur = con.cursor()
-        cur.execute("UPDATE consultas SET paciente_id = ?, data = ?, horario = ? WHERE id = ?",
-                    (paciente_id, data, horario, consulta_id))
-        con.commit()
-        con.close()
-        carregar_consultas()
+        try:
+            cur.execute("""
+                UPDATE consultas
+                SET paciente_id = ?, data = ?, horario = ?
+                WHERE id = ?
+            """, (novo_paciente_id, nova_data, novo_horario, consulta_id))
+            con.commit()
+            messagebox.showinfo("Sucesso", "Consulta atualizada.")
+            carregar_consultas()
+        except sqlite3.Error as e:
+            messagebox.showerror("Erro", f"Erro ao editar: {e}")
+        finally:
+            con.close()
 
-    def preencher_campos(event):
+    def excluir_consulta():
         selected = tree.focus()
         if not selected:
+            messagebox.showwarning("Aviso", "Selecione uma consulta para excluir.")
             return
+        consulta_id = tree.item(selected)['values'][0]
+        confirm = messagebox.askyesno("Confirmação", "Deseja excluir esta consulta?")
+        if confirm:
+            con = conectar()
+            cur = con.cursor()
+            try:
+                cur.execute("DELETE FROM consultas WHERE id = ?", (consulta_id,))
+                con.commit()
+                messagebox.showinfo("Sucesso", "Consulta excluída.")
+                carregar_consultas()
+            except sqlite3.Error as e:
+                messagebox.showerror("Erro", f"Erro ao excluir: {e}")
+            finally:
+                con.close()
 
-        values = tree.item(selected)['values']
-        consulta_id, paciente_nome, data, horario = values
-        entry_data.delete(0, tk.END)
-        entry_data.insert(0, data)
-        entry_horario.delete(0, tk.END)
-        entry_horario.insert(0, horario)
-        # Tenta encontrar o paciente correspondente na combo
-        for item in combo_paciente['values']:
-            if paciente_nome in item:
-                combo_paciente.set(item)
-                break
+    # Botões
+    botoes = ttk.Frame(janela)
+    botoes.pack(pady=10)
 
-    # Frame de formulário
-    frame = ttk.Frame(janela, padding=10)
-    frame.pack(fill=tk.X)
-
-    ttk.Label(frame, text="Paciente:").grid(row=0, column=0, sticky=tk.W, pady=2)
-    combo_paciente = ttk.Combobox(frame, width=30)
-    combo_paciente.grid(row=0, column=1, pady=2, padx=5)
-
-    ttk.Label(frame, text="Data (AAAA-MM-DD):").grid(row=1, column=0, sticky=tk.W, pady=2)
-    entry_data = ttk.Entry(frame, width=30)
-    entry_data.grid(row=1, column=1, pady=2, padx=5)
-
-    ttk.Label(frame, text="Horário (HH:MM):").grid(row=2, column=0, sticky=tk.W, pady=2)
-    entry_horario = ttk.Entry(frame, width=30)
-    entry_horario.grid(row=2, column=1, pady=2, padx=5)
-
-    ttk.Button(frame, text="Adicionar", command=adicionar_consulta).grid(row=3, column=0, pady=10)
-    ttk.Button(frame, text="Editar", command=editar_consulta).grid(row=3, column=1, pady=10, sticky=tk.W)
-    ttk.Button(frame, text="Excluir", command=excluir_consulta).grid(row=3, column=1, pady=10, sticky=tk.E)
-
-    # Tabela de consultas
-    tree = ttk.Treeview(janela, columns=("ID", "Paciente", "Data", "Horário"), show="headings")
-    for col in ("ID", "Paciente", "Data", "Horário"):
-        tree.heading(col, text=col)
-        tree.column(col, anchor="center")
-
-    tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-    tree.bind("<<TreeviewSelect>>", preencher_campos)
-
-    carregar_pacientes()
-    carregar_consultas()
+    estilo_botao = {"style": "TButton"}
+    ttk.Button(botoes, text="➕ Adicionar", command=adicionar_consulta, **estilo_botao).grid(row=0, column=0, padx=5)
+    ttk.Button(botoes, text="✏️ Editar", command=editar_consulta, **estilo_botao).grid(row=0, column=1, padx=5)
+    ttk.Button(botoes, text="❌ Excluir", command=excluir_consulta, **estilo_botao).grid(row=0, column=2, padx=5)
