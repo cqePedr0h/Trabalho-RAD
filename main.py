@@ -35,11 +35,6 @@ def main():
     btn_anotacoes = ttk.Button(frame, text="📝 Gerenciar Anotações", command=anotacoes.janela_anotacoes)
     btn_anotacoes.pack(pady=10)
 
-    # Rodapé
-    rodape = tk.Label(root, text="© 2025 Terapia Holística - Projeto Acadêmico", 
-                      font=("Segoe UI", 9), bg="#f7f6f2", fg="#888888")
-    rodape.pack(side="bottom", pady=10)
-
     root.mainloop()
 
 if __name__ == "__main__":
