@@ -1,36 +1,46 @@
 import tkinter as tk
 from tkinter import ttk
-from telas import pacientes, consultas
-import telas.anotacoes as anotacoes
+from telas import pacientes, consultas, anotacoes
 
 def main():
-    #janela principal
-    janela = tk.Tk()
-    janela.title("Sistema do Terapeuta Holístico")
-    janela.geometry("400x300")
-    janela.configure(bg="#f5f5f5")  # Cor de fundo 
+    root = tk.Tk()
+    root.title("Sistema de Terapia Holística")
+    root.geometry("900x600")
+    root.configure(bg="#f7f6f2")
 
-    # Aplicar estilo aos widgets
+    # Estilo para ttk.Botões
     style = ttk.Style()
-    style.theme_use('clam')  
-    style.configure("TButton", font=("Helvetica", 11, "bold"), foreground="#003c32", padding=6)
-    style.configure("TLabel", font=("Helvetica", 10))
-    style.configure("TFrame", background="#f5f5f5")
-
-    # Frame principal para centralizar os botões
-    frame = ttk.Frame(janela, padding=20)
-    frame.pack(expand=True)
+    style.configure("TButton", font=("Segoe UI", 12), padding=10)
+    
+    # Frame central
+    frame = tk.Frame(root, bg="#ffffff", bd=2, relief="groove")
+    frame.place(relx=0.5, rely=0.5, anchor="center")
 
     # Título
-    ttk.Label(frame, text="Bem-vindo ao Sistema do Terapeuta").pack(pady=(0, 20))
+    titulo = tk.Label(frame, text="Sistema de Gestão do Terapeuta Holístico", 
+                      font=("Segoe UI", 20, "bold"), bg="#ffffff", fg="#3e3e3e")
+    titulo.pack(pady=(20, 10), padx=20)
 
-    # Botões principais
-    ttk.Button(frame, text="Gerenciar Pacientes", width=25, command=pacientes.janela_pacientes).pack(pady=5)
-    ttk.Button(frame, text="Gerenciar Consultas", width=25, command=consultas.janela_consultas).pack(pady=5)
-    ttk.Button(frame, text="Anotações do Terapeuta", width=25, command=anotacoes.janela_anotacoes).pack(pady=5)
+    subtitulo = tk.Label(frame, text="Selecione uma opção abaixo:", 
+                         font=("Segoe UI", 12), bg="#ffffff", fg="#666666")
+    subtitulo.pack(pady=(0, 20))
 
-    # Iniciar a aplicação
-    janela.mainloop()
+    # Botões
+    btn_pacientes = ttk.Button(frame, text="📋 Gerenciar Pacientes", command=pacientes.janela_pacientes)
+    btn_pacientes.pack(pady=10)
+
+    btn_consultas = ttk.Button(frame, text="📅 Gerenciar Consultas", command=consultas.janela_consultas)
+    btn_consultas.pack(pady=10)
+
+    btn_anotacoes = ttk.Button(frame, text="📝 Gerenciar Anotações", command=anotacoes.janela_anotacoes)
+    btn_anotacoes.pack(pady=10)
+
+    # Rodapé
+    rodape = tk.Label(root, text="© 2025 Terapia Holística - Projeto Acadêmico", 
+                      font=("Segoe UI", 9), bg="#f7f6f2", fg="#888888")
+    rodape.pack(side="bottom", pady=10)
+
+    root.mainloop()
 
 if __name__ == "__main__":
     main()
