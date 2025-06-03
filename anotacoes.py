@@ -1,132 +1,117 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-import sqlite3
 from database import conectar
 
 def janela_anotacoes():
     janela = tk.Toplevel()
-    janela.title("Anotações do Terapeuta Holístico")
-    janela.geometry("800x600")
-    janela.configure(bg="#f7f6f2")  # Cor suave de fundo
+    janela.title("Gerenciar Anotações")
+    janela.geometry("650x450")
 
-    # Título estilizado
-    tk.Label(
-        janela,
-        text="Anotações do Terapeuta Holístico",
-        font=("Segoe UI", 18, "bold"),
-        bg="#f7f6f2",
-        fg="#3e3e3e"
-    ).pack(pady=10)
+    style = ttk.Style()
+    style.configure("Treeview", font=("Segoe UI", 10))
+    style.configure("Treeview.Heading", font=("Segoe UI", 11, "bold"))
 
-    # Criação das abas
-    tab_control = ttk.Notebook(janela)
-    tab_control.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    frame = ttk.Frame(janela, padding=10)
+    frame.pack(fill=tk.BOTH, expand=True)
 
-    tab_consultas = ttk.Frame(tab_control)
-    tab_anotacoes = ttk.Frame(tab_control)
+    tree = ttk.Treeview(frame, columns=("ID", "Consulta", "Conteúdo"), show="headings")
+    tree.heading("ID", text="ID")
+    tree.column("ID", width=50, anchor="center")
+    tree.heading("Consulta", text="Consulta")
+    tree.column("Consulta", width=200, anchor="center")
+    tree.heading("Conteúdo", text="Conteúdo")
+    tree.column("Conteúdo", anchor="w")
+    tree.pack(fill=tk.BOTH, expand=True)
 
-    tab_control.add(tab_consultas, text='Consultas')
-    tab_control.add(tab_anotacoes, text='Anotações')
-
-    # --- CONSULTAS TAB ---
-    tree_consultas = ttk.Treeview(tab_consultas, columns=("ID", "Paciente", "Data", "Hora"), show='headings')
-    for col in ("ID", "Paciente", "Data", "Hora"):
-        tree_consultas.heading(col, text=col)
-        tree_consultas.column(col, width=100, anchor="center")
-    tree_consultas.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-    def carregar_consultas():
+    def carregar_anotacoes():
         con = conectar()
         cur = con.cursor()
         cur.execute("""
-            SELECT consultas.id, pacientes.nome, consultas.data, consultas.horario
-            FROM consultas
+            SELECT anotacoes.id, pacientes.nome || ' - ' || consultas.data || ' ' || consultas.horario AS consulta_info,
+                   anotacoes.conteudo
+            FROM anotacoes
+            JOIN consultas ON anotacoes.consulta_id = consultas.id
             JOIN pacientes ON consultas.paciente_id = pacientes.id
-            ORDER BY consultas.data
+            ORDER BY anotacoes.id DESC
         """)
-        consultas = cur.fetchall()
-        con.close()
-
-        for row in tree_consultas.get_children():
-            tree_consultas.delete(row)
-        for c in consultas:
-            tree_consultas.insert('', 'end', values=c)
-
-    carregar_consultas()
-
-    # --- ANOTAÇÕES TAB ---
-    frame_anotacoes = tk.Frame(tab_anotacoes, bg="#f7f6f2")
-    frame_anotacoes.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-    label_anotacoes = tk.Label(
-        frame_anotacoes,
-        text="Anotações da Consulta Selecionada:",
-        font=("Segoe UI", 12, "bold"),
-        bg="#f7f6f2"
-    )
-    label_anotacoes.pack(anchor='w', padx=10, pady=(0,5))
-
-    text_anotacoes = tk.Text(frame_anotacoes, height=6, font=("Segoe UI", 10))
-    text_anotacoes.pack(fill=tk.BOTH, expand=True, padx=10)
-
-    label_nova = tk.Label(
-        frame_anotacoes,
-        text="Nova anotação:",
-        font=("Segoe UI", 11),
-        bg="#f7f6f2"
-    )
-    label_nova.pack(anchor='w', padx=10, pady=(10,0))
-
-    entry_nova_anotacao = tk.Entry(frame_anotacoes, width=100, font=("Segoe UI", 10))
-    entry_nova_anotacao.pack(padx=10, pady=(0,5))
-
-    def exibir_anotacoes(event):
-        selected = tree_consultas.focus()
-        if not selected:
-            return
-        consulta_id = tree_consultas.item(selected)['values'][0]
-
-        con = conectar()
-        cur = con.cursor()
-        cur.execute("SELECT conteudo FROM anotacoes WHERE consulta_id = ?", (consulta_id,))
         anotacoes = cur.fetchall()
         con.close()
 
-        text_anotacoes.delete("1.0", tk.END)
+        tree.delete(*tree.get_children())
         for a in anotacoes:
-            text_anotacoes.insert(tk.END, f"- {a[0]}\n")
-
-    tree_consultas.bind("<<TreeviewSelect>>", exibir_anotacoes)
+            tree.insert("", "end", values=a)
 
     def adicionar_anotacao():
-        selected = tree_consultas.focus()
-        if not selected:
-            messagebox.showwarning("Aviso", "Selecione uma consulta.")
-            return
+        def salvar():
+            selected = combo_consultas.get()
+            conteudo = text_conteudo.get("1.0", tk.END).strip()
 
-        consulta_id = tree_consultas.item(selected)['values'][0]
-        conteudo = entry_nova_anotacao.get()
+            if not selected or not conteudo:
+                messagebox.showwarning("Aviso", "Preencha todos os campos.")
+                return
 
-        if not conteudo:
-            messagebox.showwarning("Aviso", "Digite uma anotação.")
-            return
+            consulta_id = consulta_ids.get(selected)
+            if not consulta_id:
+                messagebox.showerror("Erro", "Consulta inválida.")
+                return
+
+            con = conectar()
+            cur = con.cursor()
+            cur.execute("INSERT INTO anotacoes (consulta_id, conteudo) VALUES (?, ?)", (consulta_id, conteudo))
+            con.commit()
+            con.close()
+            messagebox.showinfo("Sucesso", "Anotação adicionada.")
+            janela_add.destroy()
+            carregar_anotacoes()
+
+        janela_add = tk.Toplevel(janela)
+        janela_add.title("Adicionar Anotação")
+        janela_add.geometry("400x300")
+        janela_add.grab_set()
+
+        ttk.Label(janela_add, text="Consulta:").pack(pady=5)
+
+        combo_consultas = ttk.Combobox(janela_add, state="readonly")
+        combo_consultas.pack(fill=tk.X, padx=10)
 
         con = conectar()
         cur = con.cursor()
-        cur.execute("INSERT INTO anotacoes (consulta_id, conteudo) VALUES (?, ?)", (consulta_id, conteudo))
-        con.commit()
+        cur.execute("""
+            SELECT consultas.id, pacientes.nome || ' - ' || consultas.data || ' ' || consultas.horario
+            FROM consultas
+            JOIN pacientes ON consultas.paciente_id = pacientes.id
+        """)
+        dados = cur.fetchall()
         con.close()
 
-        messagebox.showinfo("Sucesso", "Anotação adicionada.")
-        entry_nova_anotacao.delete(0, tk.END)
-        exibir_anotacoes(None)
+        consulta_ids = {label: cid for cid, label in dados}
+        combo_consultas["values"] = list(consulta_ids.keys())
 
-    btn_add = tk.Button(
-        frame_anotacoes,
-        text="Adicionar Anotação",
-        command=adicionar_anotacao,
-        bg="#7ca6a1",
-        fg="white",
-        font=("Segoe UI", 10, "bold")
-    )
-    btn_add.pack(pady=5)
+        ttk.Label(janela_add, text="Conteúdo:").pack(pady=5)
+        text_conteudo = tk.Text(janela_add, height=10)
+        text_conteudo.pack(fill=tk.BOTH, padx=10, pady=5)
+
+        ttk.Button(janela_add, text="Salvar", command=salvar).pack(pady=10)
+
+    def excluir_anotacao():
+        selected = tree.focus()
+        if not selected:
+            messagebox.showwarning("Aviso", "Selecione uma anotação para excluir.")
+            return
+        id_anotacao = tree.item(selected)["values"][0]
+        confirm = messagebox.askyesno("Confirmação", "Deseja excluir esta anotação?")
+        if confirm:
+            con = conectar()
+            cur = con.cursor()
+            cur.execute("DELETE FROM anotacoes WHERE id=?", (id_anotacao,))
+            con.commit()
+            con.close()
+            carregar_anotacoes()
+
+    frame_botoes = ttk.Frame(janela)
+    frame_botoes.pack(pady=10)
+
+    ttk.Button(frame_botoes, text="Adicionar Anotação", command=adicionar_anotacao).grid(row=0, column=0, padx=5)
+    ttk.Button(frame_botoes, text="Excluir Anotação", command=excluir_anotacao).grid(row=0, column=1, padx=5)
+
+    carregar_anotacoes()
