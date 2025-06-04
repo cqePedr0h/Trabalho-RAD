@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import sqlite3
-from database import conectar
+from criar_tabelas import conectar
 
 def janela_pacientes():
     janela = tk.Toplevel()
@@ -48,12 +48,12 @@ def janela_pacientes():
     def carregar_pacientes():
         for row in tree.get_children():
             tree.delete(row)
-        con = conectar()
-        cur = con.cursor()
-        cur.execute("SELECT * FROM pacientes")
+        conn = conectar()
+        cur = conn.cursor()
+        cur.cursor.execute("SELECT * FROM paciente")
         for paciente in cur.fetchall():
             tree.insert('', tk.END, values=paciente)
-        con.close()
+        conn.close()
 
     def adicionar_paciente():
         nome = nome_entry.get()
@@ -61,16 +61,15 @@ def janela_pacientes():
         telefone = telefone_entry.get()
         email = email_entry.get()
 
-        if not nome:
-            messagebox.showwarning("Atenção", "O campo nome é obrigatório.")
-            return
-
-        con = conectar()
-        cur = con.cursor()
-        cur.execute("INSERT INTO pacientes (nome, idade, telefone, email) VALUES (?, ?, ?, ?)",
+        if nome and email:
+            conn = sqlite3.connect("paciente.db")
+            
+        conn = conectar()
+        cur = conn.cursor()
+        conn.cursor.execute("INSERT INTO paciente (nome, idade, telefone, email) VALUES (?, ?, ?, ?)",
                     (nome, idade, telefone, email))
-        con.commit()
-        con.close()
+        conn.conn.commit()
+        conn.close()
         carregar_pacientes()
         limpar_campos()
 
@@ -82,11 +81,11 @@ def janela_pacientes():
 
         paciente_id = tree.item(selecionado)["values"][0]
         if messagebox.askyesno("Confirmar", "Tem certeza que deseja excluir este paciente?"):
-            con = conectar()
-            cur = con.cursor()
-            cur.execute("DELETE FROM pacientes WHERE id = ?", (paciente_id,))
-            con.commit()
-            con.close()
+            conn = conectar()
+            cur = conn.cursor()
+            cur.execute("DELETE FROM paciente WHERE id = ?", (paciente_id,))
+            conn.commit()
+            conn.close()
             carregar_pacientes()
 
     def editar_paciente():
@@ -101,15 +100,15 @@ def janela_pacientes():
         telefone = telefone_entry.get()
         email = email_entry.get()
 
-        con = conectar()
-        cur = con.cursor()
+        conn = conectar()
+        cur = conn.cursor()
         cur.execute("""
-            UPDATE pacientes
+            UPDATE paciente
             SET nome = ?, idade = ?, telefone = ?, email = ?
             WHERE id = ?
         """, (nome, idade, telefone, email, paciente_id))
-        con.commit()
-        con.close()
+        conn.commit()
+        conn.close()
         carregar_pacientes()
         limpar_campos()
 

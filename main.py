@@ -7,6 +7,7 @@ def main():
     root.title("Sistema de Terapia Holística")
     root.geometry("900x600")
     root.configure(bg="#f7f6f2")
+    root.iconbitmap(default="logos/favicon.ico")
 
     # Estilo para ttk.Botões
     style = ttk.Style()
