@@ -1,30 +1,80 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from main import main  # Importa sua janela principal
+from criar_tabelas import conectar
+import hashlib
 
-def login():
-    def verificar_login():
-        usuario = entry_usuario.get().strip()
-        if not usuario:
-            messagebox.showwarning("Aviso", "Digite um nome de usuário.")
+def hash_senha(senha):
+    return hashlib.sha256(senha.encode()).hexdigest()
+
+def janela_login(root, abrir_janela_principal):
+    janela = tk.Toplevel(root)
+    janela.title("Login")
+    janela.geometry("400x250")
+    janela.configure(bg="#f7f6f2")
+
+    janela.update_idletasks()
+    largura = 400
+    altura = 250
+    x = (janela.winfo_screenwidth() // 2) - (largura // 2)
+    y = (janela.winfo_screenheight() // 2) - (altura // 2)
+    janela.geometry(f"{largura}x{altura}+{x}+{y}")
+
+    estilo = ttk.Style()
+    estilo.configure("TButton", font=("Segoe UI", 10, "bold"), padding=6)
+
+    frame = ttk.Frame(janela, padding=20)
+    frame.pack(expand=True, fill=tk.BOTH)
+
+    ttk.Label(frame, text="Usuário:", font=("Segoe UI", 11)).grid(row=0, column=0, sticky="w", pady=5)
+    usuario_entry = ttk.Entry(frame, font=("Segoe UI", 11))
+    usuario_entry.grid(row=0, column=1, pady=5, sticky="ew")
+
+    ttk.Label(frame, text="Senha:", font=("Segoe UI", 11)).grid(row=1, column=0, sticky="w", pady=5)
+    senha_entry = ttk.Entry(frame, show="*", font=("Segoe UI", 11))
+    senha_entry.grid(row=1, column=1, pady=5, sticky="ew")
+
+    frame.grid_columnconfigure(1, weight=1)
+
+    def validar_login():
+        usuario = usuario_entry.get().strip()
+        senha = senha_entry.get()
+        if not usuario or not senha:
+            messagebox.showwarning("Aviso", "Preencha usuário e senha.")
             return
-        login_janela.destroy()
-        main()
+        senha_h = hash_senha(senha)
+        conn = conectar()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM usuarios WHERE usuario = ? AND senha = ?", (usuario, senha_h))
+        if cur.fetchone():
+            messagebox.showinfo("Sucesso", f"Bem-vindo, {usuario}!")
+            janela.destroy()
+            abrir_janela_principal()
+        else:
+            messagebox.showerror("Erro", "Usuário ou senha incorretos.")
+        conn.close()
 
-    login_janela = tk.Tk()
-    login_janela.title("Login - Sistema de Terapia Holística")
-    login_janela.geometry("400x250")
-    login_janela.configure(bg="#f7f6f2")
+    def cadastrar_usuario():
+        usuario = usuario_entry.get().strip()
+        senha = senha_entry.get()
+        if not usuario or not senha:
+            messagebox.showwarning("Aviso", "Preencha usuário e senha para cadastro.")
+            return
+        senha_h = hash_senha(senha)
+        conn = conectar()
+        cur = conn.cursor()
+        try:
+            cur.execute("INSERT INTO usuarios (usuario, senha) VALUES (?, ?)", (usuario, senha_h))
+            conn.commit()
+            messagebox.showinfo("Sucesso", "Usuário cadastrado com sucesso!")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro no cadastro: {e}")
+        finally:
+            conn.close()
 
-    frame = tk.Frame(login_janela, bg="#ffffff", bd=2, relief="groove")
-    frame.place(relx=0.5, rely=0.5, anchor="center")
+    btn_frame = ttk.Frame(frame)
+    btn_frame.grid(row=2, column=0, columnspan=2, pady=20)
 
-    tk.Label(frame, text="Bem-vindo(a)", font=("Segoe UI", 16, "bold"), bg="#ffffff").pack(pady=10)
-    tk.Label(frame, text="Digite seu nome de usuário:", font=("Segoe UI", 11), bg="#ffffff").pack(pady=(5, 0))
+    ttk.Button(btn_frame, text="Login", command=validar_login).grid(row=0, column=0, padx=10)
+    ttk.Button(btn_frame, text="Cadastrar", command=cadastrar_usuario).grid(row=0, column=1, padx=10)
 
-    entry_usuario = ttk.Entry(frame, font=("Segoe UI", 11))
-    entry_usuario.pack(pady=10, padx=20)
-
-    ttk.Button(frame, text="Entrar", command=verificar_login).pack(pady=10)
-
-    login_janela.mainloop()
+    return janela
