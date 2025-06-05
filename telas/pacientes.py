@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-import sqlite3
 from criar_tabelas import conectar
+
 
 def janela_pacientes():
     janela = tk.Toplevel()
@@ -16,18 +16,27 @@ def janela_pacientes():
     frame_principal = ttk.Frame(janela, padding=20)
     frame_principal.pack(fill=tk.BOTH, expand=True)
 
-    # Labels com fonte maior
     ttk.Label(frame_principal, text="Nome:", font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w", padx=5, pady=6)
-    ttk.Label(frame_principal, text="Idade:", font=("Segoe UI", 12)).grid(row=1, column=0, sticky="w", padx=5, pady=6)
+    ttk.Label(frame_principal, text="Data de Nascimento (DD/MM/AAAA):", font=("Segoe UI", 12)).grid(row=1, column=0, sticky="w", padx=5, pady=6)
     ttk.Label(frame_principal, text="Telefone:", font=("Segoe UI", 12)).grid(row=2, column=0, sticky="w", padx=5, pady=6)
     ttk.Label(frame_principal, text="Email:", font=("Segoe UI", 12)).grid(row=3, column=0, sticky="w", padx=5, pady=6)
 
-    # Entradas maiores e com fonte maior
     nome_entry = ttk.Entry(frame_principal, width=50, font=("Segoe UI", 12))
     nome_entry.grid(row=0, column=1, pady=6)
 
-    idade_entry = ttk.Entry(frame_principal, width=50, font=("Segoe UI", 12))
-    idade_entry.grid(row=1, column=1, pady=6)
+    def mascara_data(event):
+        texto = nascimento_entry.get().replace("/", "")[:8]
+        novo = ""
+        for i in range(len(texto)):
+            if i in [2, 4]:
+                novo += "/"
+            novo += texto[i]
+        nascimento_entry.delete(0, tk.END)
+        nascimento_entry.insert(0, novo)
+
+    nascimento_entry = ttk.Entry(frame_principal, width=50, font=("Segoe UI", 12))
+    nascimento_entry.grid(row=1, column=1, pady=6)
+    nascimento_entry.bind("<KeyRelease>", mascara_data)
 
     telefone_entry = ttk.Entry(frame_principal, width=50, font=("Segoe UI", 12))
     telefone_entry.grid(row=2, column=1, pady=6)
@@ -35,8 +44,7 @@ def janela_pacientes():
     email_entry = ttk.Entry(frame_principal, width=50, font=("Segoe UI", 12))
     email_entry.grid(row=3, column=1, pady=6)
 
-    # Treeview
-    tree = ttk.Treeview(frame_principal, columns=("ID", "Nome", "Idade", "Telefone", "Email"), show="headings")
+    tree = ttk.Treeview(frame_principal, columns=("ID", "Nome", "Nascimento", "Telefone", "Email"), show="headings")
     for col in tree["columns"]:
         tree.heading(col, text=col)
         tree.column(col, anchor="center", width=120)
@@ -50,25 +58,26 @@ def janela_pacientes():
             tree.delete(row)
         conn = conectar()
         cur = conn.cursor()
-        cur.cursor.execute("SELECT * FROM paciente")
+        cur.execute("SELECT * FROM paciente")
         for paciente in cur.fetchall():
             tree.insert('', tk.END, values=paciente)
         conn.close()
 
     def adicionar_paciente():
         nome = nome_entry.get()
-        idade = idade_entry.get()
+        nascimento = nascimento_entry.get()
         telefone = telefone_entry.get()
         email = email_entry.get()
 
-        if nome and email:
-            conn = sqlite3.connect("paciente.db")
-            
+        if not nome or not telefone or not email:
+            messagebox.showwarning("Atenção", "Preencha todos os campos obrigatórios (Nome, Telefone, Email).")
+            return
+
         conn = conectar()
         cur = conn.cursor()
-        conn.cursor.execute("INSERT INTO paciente (nome, idade, telefone, email) VALUES (?, ?, ?, ?)",
-                    (nome, idade, telefone, email))
-        conn.conn.commit()
+        cur.execute("INSERT INTO paciente (nome, data_nascimento, telefone, email) VALUES (?, ?, ?, ?)",
+                    (nome, nascimento, telefone, email))
+        conn.commit()
         conn.close()
         carregar_pacientes()
         limpar_campos()
@@ -78,7 +87,6 @@ def janela_pacientes():
         if not selecionado:
             messagebox.showwarning("Atenção", "Selecione um paciente para excluir.")
             return
-
         paciente_id = tree.item(selecionado)["values"][0]
         if messagebox.askyesno("Confirmar", "Tem certeza que deseja excluir este paciente?"):
             conn = conectar()
@@ -93,53 +101,54 @@ def janela_pacientes():
         if not selecionado:
             messagebox.showwarning("Atenção", "Selecione um paciente para editar.")
             return
-
         paciente_id = tree.item(selecionado)["values"][0]
         nome = nome_entry.get()
-        idade = idade_entry.get()
+        nascimento = nascimento_entry.get()
         telefone = telefone_entry.get()
         email = email_entry.get()
+
+        if not nome or not telefone or not email:
+            messagebox.showwarning("Atenção", "Preencha todos os campos obrigatórios (Nome, Telefone, Email).")
+            return
 
         conn = conectar()
         cur = conn.cursor()
         cur.execute("""
             UPDATE paciente
-            SET nome = ?, idade = ?, telefone = ?, email = ?
+            SET nome = ?, data_nascimento = ?, telefone = ?, email = ?
             WHERE id = ?
-        """, (nome, idade, telefone, email, paciente_id))
+        """, (nome, nascimento, telefone, email, paciente_id))
         conn.commit()
         conn.close()
         carregar_pacientes()
         limpar_campos()
 
-    def preencher_campos(event):
+    def selecionar_item(event):
         selecionado = tree.focus()
-        if not selecionado:
-            return
-        dados = tree.item(selecionado)["values"]
-        nome_entry.delete(0, tk.END)
-        idade_entry.delete(0, tk.END)
-        telefone_entry.delete(0, tk.END)
-        email_entry.delete(0, tk.END)
-
-        nome_entry.insert(0, dados[1])
-        idade_entry.insert(0, dados[2])
-        telefone_entry.insert(0, dados[3])
-        email_entry.insert(0, dados[4])
+        if selecionado:
+            valores = tree.item(selecionado)["values"]
+            nome_entry.delete(0, tk.END)
+            nome_entry.insert(0, valores[1])
+            nascimento_entry.delete(0, tk.END)
+            nascimento_entry.insert(0, valores[2])
+            telefone_entry.delete(0, tk.END)
+            telefone_entry.insert(0, valores[3])
+            email_entry.delete(0, tk.END)
+            email_entry.insert(0, valores[4])
 
     def limpar_campos():
         nome_entry.delete(0, tk.END)
-        idade_entry.delete(0, tk.END)
+        nascimento_entry.delete(0, tk.END)
         telefone_entry.delete(0, tk.END)
         email_entry.delete(0, tk.END)
 
-    tree.bind("<<TreeviewSelect>>", preencher_campos)
+    tree.bind("<<TreeviewSelect>>", selecionar_item)
 
-    frame_botoes = ttk.Frame(frame_principal)
-    frame_botoes.grid(row=4, column=0, columnspan=3, pady=10)
+    btn_frame = ttk.Frame(frame_principal)
+    btn_frame.grid(row=4, column=0, columnspan=2, pady=10)
 
-    ttk.Button(frame_botoes, text="Adicionar", command=adicionar_paciente).grid(row=0, column=0, padx=5)
-    ttk.Button(frame_botoes, text="Editar", command=editar_paciente).grid(row=0, column=1, padx=5)
-    ttk.Button(frame_botoes, text="Excluir", command=excluir_paciente).grid(row=0, column=2, padx=5)
+    ttk.Button(btn_frame, text="Adicionar", command=adicionar_paciente).grid(row=0, column=0, padx=5)
+    ttk.Button(btn_frame, text="Editar", command=editar_paciente).grid(row=0, column=1, padx=5)
+    ttk.Button(btn_frame, text="Excluir", command=excluir_paciente).grid(row=0, column=2, padx=5)
 
     carregar_pacientes()
