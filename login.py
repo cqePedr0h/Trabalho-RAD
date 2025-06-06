@@ -1,4 +1,4 @@
-import tkinter as tk
+import tkinter as tk 
 from tkinter import ttk, messagebox
 from criar_tabelas import conectar
 import hashlib
@@ -20,20 +20,24 @@ def janela_login(root, abrir_janela_principal):
     janela.geometry(f"{largura}x{altura}+{x}+{y}")
 
     estilo = ttk.Style()
+    estilo.theme_use("default")
     estilo.configure("TButton", font=("Segoe UI", 10, "bold"), padding=6)
+    estilo.configure("TLabel", font=("Segoe UI", 11))
+    estilo.configure("TEntry", font=("Segoe UI", 11))
 
     frame = ttk.Frame(janela, padding=20)
     frame.pack(expand=True, fill=tk.BOTH)
 
-    ttk.Label(frame, text="Usuário:", font=("Segoe UI", 11)).grid(row=0, column=0, sticky="w", pady=5)
-    usuario_entry = ttk.Entry(frame, font=("Segoe UI", 11))
-    usuario_entry.grid(row=0, column=1, pady=5, sticky="ew")
+    ttk.Label(frame, text="Usuário:").grid(row=0, column=0, sticky="e", pady=5, padx=5)
+    usuario_entry = ttk.Entry(frame)
+    usuario_entry.grid(row=0, column=1, sticky="ew", pady=5)
 
-    ttk.Label(frame, text="Senha:", font=("Segoe UI", 11)).grid(row=1, column=0, sticky="w", pady=5)
-    senha_entry = ttk.Entry(frame, show="*", font=("Segoe UI", 11))
-    senha_entry.grid(row=1, column=1, pady=5, sticky="ew")
+    ttk.Label(frame, text="Senha:").grid(row=1, column=0, sticky="e", pady=5, padx=5)
+    senha_entry = ttk.Entry(frame, show="*")
+    senha_entry.grid(row=1, column=1, sticky="ew", pady=5)
 
-    frame.grid_columnconfigure(1, weight=1)
+    frame.columnconfigure(0, weight=0)
+    frame.columnconfigure(1, weight=1)
 
     def validar_login():
         usuario = usuario_entry.get().strip()
