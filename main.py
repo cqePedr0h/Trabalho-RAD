@@ -15,6 +15,7 @@ def abrir_tela_principal():
     y = (janela_principal.winfo_screenheight() // 2) - (altura // 2)
     janela_principal.geometry(f"{largura}x{altura}+{x}+{y}")
     janela_principal.configure(bg="#f7f6f2")
+    janela_principal.iconbitmap("logos/favicon.ico")
 
     estilo = ttk.Style()
     estilo.configure("TButton", font=("Segoe UI", 12, "bold"), padding=10)

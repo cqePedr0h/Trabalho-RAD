@@ -8,6 +8,7 @@ def janela_consultas():
     janela.title("Agendar Consultas")
     janela.geometry("750x500")
     janela.configure(bg="#f7f6f2")
+    janela.iconbitmap("logos/favicon.ico")
 
     estilo = ttk.Style()
     estilo.configure("TButton", font=("Segoe UI", 10, "bold"), padding=6)

@@ -11,6 +11,7 @@ def janela_login(root, abrir_janela_principal):
     janela.title("Login")
     janela.geometry("400x250")
     janela.configure(bg="#f7f6f2")
+    janela.iconbitmap("logos/favicon.ico")
 
     janela.update_idletasks()
     largura = 400
